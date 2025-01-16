@@ -9,6 +9,20 @@ module Msf
 ###
 class DataStore < Hash
 
+  # Temporary forking logic for conditionally using the {Msf::ModuleDatastoreWithFallbacks} implementation.
+  #
+  # This method replaces the default `ModuleDataStore.new` with the ability to instantiate the `ModuleDataStoreWithFallbacks`
+  # class instead, if the feature is enabled
+  def self.new
+    if Msf::FeatureManager.instance.enabled?(Msf::FeatureManager::DATASTORE_FALLBACKS)
+      return Msf::DataStoreWithFallbacks.new
+    end
+
+    instance = allocate
+    instance.send(:initialize)
+    instance
+  end
+
   #
   # Initializes the data store's internal state.
   #
@@ -97,7 +111,7 @@ class DataStore < Hash
   def import_options_from_s(option_str, delim = nil)
     hash = {}
 
-    # Figure out the delimeter, default to space.
+    # Figure out the delimiter, default to space.
     if (delim.nil?)
       delim = /\s/
 
@@ -106,9 +120,9 @@ class DataStore < Hash
       end
     end
 
-    # Split on the delimeter
+    # Split on the delimiter
     option_str.split(delim).each { |opt|
-      var, val = opt.split('=')
+      var, val = opt.split('=', 2)
 
       next if (var =~ /^\s+$/)
 
